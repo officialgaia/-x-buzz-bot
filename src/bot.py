@@ -37,11 +37,13 @@ def call_claude(prompt):
         "content-type": "application/json",
     }
     body = {
-        "model": "claude-sonnet-4-5",
+        "model": "claude-haiku-4-5",
         "max_tokens": 500,
         "messages": [{"role": "user", "content": prompt}],
     }
     resp = requests.post(url, headers=headers, json=body, timeout=30)
+    print(f"  APIステータス: {resp.status_code}")
+    print(f"  APIレスポンス: {resp.text[:200]}")
     resp.raise_for_status()
     return resp.json()["content"][0]["text"]
 
