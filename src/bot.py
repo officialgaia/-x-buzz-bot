@@ -2,8 +2,8 @@
 X (Twitter) 旅行・クレカ・航空券バズ投稿ボット
 - 旅行/一人旅/クレ活/ラウンジ/空港/航空券に特化
 - 過去ネタをJSONで記録してかぶりを防止
-- Stability AI SD3で画像生成
-- X API v2で画像付き自動投稿
+- 9投稿に1回だけ画像付き（Stability AI）
+- X API v2で自動投稿
 """
 
 import os
@@ -70,6 +70,27 @@ TOPICS = [
     "旅行者が知らない空港の隠れたサービス",
 ]
 
+# ── 投稿カウント管理 ────────────────────────────────────────────
+COUNTER_FILE = "logs/post_counter.json"
+
+def load_counter():
+    path = Path(COUNTER_FILE)
+    if not path.exists():
+        return {"count": 0}
+    with open(path, "r") as f:
+        return json.load(f)
+
+def save_counter(count):
+    path = Path(COUNTER_FILE)
+    path.parent.mkdir(exist_ok=True)
+    with open(path, "w") as f:
+        json.dump({"count": count}, f)
+
+def should_post_image():
+    """9投稿に1回だけ画像付き"""
+    counter = load_counter()
+    return counter["count"] % 9 == 0
+
 # ── 過去ネタ管理（かぶり防止） ──────────────────────────────────
 USED_TOPICS_FILE = "logs/used_topics.json"
 
@@ -118,20 +139,25 @@ def call_claude(prompt):
 # ── ツイート生成 ────────────────────────────────────────────────
 def generate_tweet(topic, used_tweets):
     used_examples = "\n".join([f"- {t}" for t in used_tweets[-10:]]) if used_tweets else "なし"
-    prompt = f"""あなたは旅行・マイル・クレジットカード・空港ラウンジに詳しく、Twitterで何十万インプレッションを稼ぐアカウントの運営者です。
+    prompt = f"""あなたは旅行・マイル・クレジットカード・空港ラウンジの情報を発信するTwitterアカウントの運営者です。
 
 トピック：{topic}
 
 以下の過去ツイートと内容がかぶらないようにしてください：
 {used_examples}
 
-【条件】
+【文体の条件】
 - 140文字以内
 - 絵文字は使わない
-- 自然な日本語・体験談風または驚き情報風
-- 「知らないと損」「実は」「○○するだけで」など具体的なhookで始める
-- 数字や具体的なサービス名を入れてリアリティを出す
+- 「知らないと損」「実は」「【衝撃】」「驚き」などの決まり文句は使わない
+- AIが書いた感じにならないよう、実際に旅行好きの人間が書いたような自然な口語体
+- 体験談・気づき・具体的な数字を使って信頼感を出す
+- 文末に軽い問いかけや余白を入れてもOK
 - ハッシュタグは1〜2個（#旅行 #クレカ #マイル #一人旅 #空港 から選ぶ）
+
+【良い例】
+- 「楽天プレミアムカード、年会費11000円って高く見えるけど羽田ラウンジ使うだけで元取れる。年4回以上国内線乗る人はマジでおすすめ。#クレカ」
+- 「JALの特典航空券、実は火曜と水曜に空席が出やすい。毎週この曜日にチェックするだけでハワイのビジネスが取れた。#マイル」
 
 JSONのみ返す：{{"tweet":"本文","image_prompt":"この内容に合う画像の英語プロンプト（空港・飛行機・ラウンジ・旅行風景など、photorealistic, no text, no people）","hook_score":8,"curiosity_score":7,"share_score":9,"reason":"理由"}}"""
 
@@ -162,9 +188,7 @@ def pick_best_tweet():
 
 # ── Stability AI 画像生成 ───────────────────────────────────────
 def generate_image(image_prompt):
-    import base64
     print(f"  画像生成中: {image_prompt[:50]}...")
-
     url = "https://api.stability.ai/v2beta/stable-image/generate/sd3"
     headers = {
         "authorization": f"Bearer {os.environ['STABILITY_API_KEY']}",
@@ -177,23 +201,24 @@ def generate_image(image_prompt):
         "aspect_ratio": (None, "16:9"),
     }
     resp = requests.post(url, headers=headers, files=files, timeout=60)
-    print(f"  ステータス: {resp.status_code}")
     if not resp.ok:
-        print(f"  エラー詳細: {resp.text[:200]}")
-    resp.raise_for_status()
-
+        print(f"  画像生成エラー: {resp.status_code} {resp.text[:200]}")
+        return None
     img_path = "/tmp/tweet_image.jpg"
     with open(img_path, "wb") as f:
         f.write(resp.content)
     print("  画像生成完了！")
     return img_path
 
-# ── 画像付きツイート投稿 ────────────────────────────────────────
+# ── 投稿 ────────────────────────────────────────────────────────
+def post_tweet(client, tweet_text):
+    resp = client.create_tweet(text=tweet_text)
+    return resp.data["id"]
+
 def post_tweet_with_image(client, api_v1, tweet_text, img_path):
     media = api_v1.media_upload(img_path)
-    media_id = media.media_id
-    print(f"  画像アップロード完了 (media_id: {media_id})")
-    resp = client.create_tweet(text=tweet_text, media_ids=[media_id])
+    print(f"  画像アップロード完了 (media_id: {media.media_id})")
+    resp = client.create_tweet(text=tweet_text, media_ids=[media.media_id])
     return resp.data["id"]
 
 # ── メイン ──────────────────────────────────────────────────────
@@ -210,12 +235,25 @@ def main():
         print("⚠️ スコア不足のためスキップ")
         return
 
-    img_path = generate_image(best["image_prompt"])
+    counter = load_counter()
+    use_image = should_post_image()
+    print(f"  投稿カウント: {counter['count']} / 画像付き: {use_image}")
 
-    print("🚀 投稿中...")
-    tweet_id = post_tweet_with_image(twitter, api_v1, best["tweet"], img_path)
+    tweet_id = None
+    if use_image:
+        img_path = generate_image(best["image_prompt"])
+        if img_path:
+            print("🚀 画像付きで投稿中...")
+            tweet_id = post_tweet_with_image(twitter, api_v1, best["tweet"], img_path)
+        else:
+            print("🚀 画像生成失敗のためテキストのみ投稿...")
+            tweet_id = post_tweet(twitter, best["tweet"])
+    else:
+        print("🚀 テキストのみで投稿中...")
+        tweet_id = post_tweet(twitter, best["tweet"])
+
     print(f"✅ 投稿完了！ https://x.com/i/web/status/{tweet_id}")
-
+    save_counter(counter["count"] + 1)
     save_used_topic(best["topic"], best["tweet"])
 
 if __name__ == "__main__":
