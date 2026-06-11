@@ -2,7 +2,7 @@
 X (Twitter) 旅行・クレカ・航空券バズ投稿ボット
 - 旅行/一人旅/クレ活/ラウンジ/空港/航空券に特化
 - 過去ネタをJSONで記録してかぶりを防止
-- Pollinations AIで画像生成（無料・APIキー不要）
+- Stability AI SD3で画像生成
 - X API v2で画像付き自動投稿
 """
 
@@ -11,7 +11,6 @@ import json
 import random
 import requests
 import tweepy
-import urllib.parse
 from datetime import datetime
 from pathlib import Path
 
@@ -134,7 +133,7 @@ def generate_tweet(topic, used_tweets):
 - 数字や具体的なサービス名を入れてリアリティを出す
 - ハッシュタグは1〜2個（#旅行 #クレカ #マイル #一人旅 #空港 から選ぶ）
 
-JSONのみ返す：{{"tweet":"本文","image_prompt":"この内容に合う画像の英語プロンプト（空港・飛行機・ラウンジ・旅行風景など、photorealistic, no text, no words）","hook_score":8,"curiosity_score":7,"share_score":9,"reason":"理由"}}"""
+JSONのみ返す：{{"tweet":"本文","image_prompt":"この内容に合う画像の英語プロンプト（空港・飛行機・ラウンジ・旅行風景など、photorealistic, no text, no people）","hook_score":8,"curiosity_score":7,"share_score":9,"reason":"理由"}}"""
 
     raw = call_claude(prompt).strip()
     start = raw.find("{")
@@ -161,13 +160,28 @@ def pick_best_tweet():
         raise RuntimeError("候補を生成できませんでした")
     return max(candidates, key=lambda x: x["total_score"])
 
-# ── Pollinations AI 画像生成（無料・APIキー不要） ───────────────
+# ── Stability AI 画像生成 ───────────────────────────────────────
 def generate_image(image_prompt):
+    import base64
     print(f"  画像生成中: {image_prompt[:50]}...")
-    encoded = urllib.parse.quote(image_prompt + ", photorealistic, travel photography, no text")
-    url = f"https://image.pollinations.ai/prompt/{encoded}?width=1280&height=720&nologo=true&model=flux"
-    resp = requests.get(url, timeout=60)
+
+    url = "https://api.stability.ai/v2beta/stable-image/generate/sd3"
+    headers = {
+        "authorization": f"Bearer {os.environ['STABILITY_API_KEY']}",
+        "accept": "image/*",
+    }
+    files = {
+        "prompt": (None, image_prompt + ", photorealistic, high quality, travel photography, no text, no people"),
+        "output_format": (None, "jpeg"),
+        "model": (None, "sd3-turbo"),
+        "aspect_ratio": (None, "16:9"),
+    }
+    resp = requests.post(url, headers=headers, files=files, timeout=60)
+    print(f"  ステータス: {resp.status_code}")
+    if not resp.ok:
+        print(f"  エラー詳細: {resp.text[:200]}")
     resp.raise_for_status()
+
     img_path = "/tmp/tweet_image.jpg"
     with open(img_path, "wb") as f:
         f.write(resp.content)
