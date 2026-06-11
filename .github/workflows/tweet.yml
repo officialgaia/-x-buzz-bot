@@ -20,7 +20,10 @@ jobs:
           python-version: "3.11"
 
       - name: 依存パッケージをインストール
-        run: pip install -r requirements.txt
+        run: |
+          pip install --no-cache-dir -r requirements.txt
+          echo "=== bot.py の内容確認 ==="
+          cat src/bot.py
 
       - name: ボット実行
         env:
