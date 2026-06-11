@@ -180,22 +180,29 @@ def pick_best_tweet():
 
 # ── Stability AI 画像生成 ───────────────────────────────────────
 def generate_image(image_prompt):
+    import base64
     print(f"  画像生成中: {image_prompt[:50]}...")
-    url = "https://api.stability.ai/v2beta/stable-image/generate/core"
+    url = "https://api.stability.ai/v1/generation/stable-diffusion-xl-1024-v1-0/text-to-image"
     headers = {
         "authorization": f"Bearer {os.environ['STABILITY_API_KEY']}",
-        "accept": "image/*",
+        "content-type": "application/json",
+        "accept": "application/json",
     }
-    data = {
-        "prompt": image_prompt + ", photorealistic, high quality, travel photography style",
-        "output_format": "jpeg",
-        "aspect_ratio": "16:9",
+    body = {
+        "text_prompts": [
+            {"text": image_prompt + ", photorealistic, high quality, travel photography", "weight": 1}
+        ],
+        "width": 1024,
+        "height": 576,
+        "steps": 30,
+        "samples": 1,
     }
-    resp = requests.post(url, headers=headers, data=data, timeout=60)
+    resp = requests.post(url, headers=headers, json=body, timeout=60)
     resp.raise_for_status()
+    img_data = resp.json()["artifacts"][0]["base64"]
     img_path = "/tmp/tweet_image.jpg"
     with open(img_path, "wb") as f:
-        f.write(resp.content)
+        f.write(base64.b64decode(img_data))
     print("  画像生成完了！")
     return img_path
 
