@@ -51,7 +51,7 @@ def generate_tweet(topic):
     prompt = f"""あなたはTwitterで何十万インプレッションも稼ぐ「雑学・豆知識」アカウントの中の人です。
 トピック：{topic}
 バズりやすいツイートを1つ作成してください。
-条件：140文字以内、絵文字2〜4個、ハッシュタグ1〜2個、冒頭でスクロールを止めるhook。
+条件：条件：140文字以内、絵文字は使わない、自然な日本語文体、ハッシュタグ1〜2個、冒頭でスクロールを止めるhook。
 JSONのみ返す：{{"tweet":"本文","hook_score":8,"curiosity_score":7,"share_score":9,"reason":"理由"}}"""
     raw = call_claude(prompt).strip()
     start = raw.find("{")
