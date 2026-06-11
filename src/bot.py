@@ -23,8 +23,11 @@ def get_twitter_client():
     )
 
 def get_claude_client():
-    return anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-
+    import httpx
+    return anthropic.Anthropic(
+        api_key=os.environ["ANTHROPIC_API_KEY"],
+        http_client=httpx.Client()
+    )
 # ── トピック一覧（雑学・豆知識ジャンル） ────────────────────────
 TOPICS = [
     "人体・脳科学の不思議な事実",
