@@ -85,6 +85,15 @@ python test_dry_run.py
 ### トピックを追加・変更する
 `src/bot.py` の `TOPICS` リストを編集
 
+### サイト宣伝ツイートの頻度を変える
+`PROMO_EVERY` 投稿に1回、Card Collection（クレカ比較・コレクションサイト）の宣伝ツイートを
+通常投稿の代わりに自動投稿します。宣伝文はClaudeが毎回自然な口語で生成し、末尾にサイトURLを付与します。
+
+- デフォルトは **5**（5投稿に1回＝1日3投稿なら約1.5日に1回）
+- 無効化するには `0`
+- 変更は GitHub Actions の env か、リポジトリの Variables で `PROMO_EVERY` を設定
+- 宣伝先URLは `PROMO_URL`（デフォルト `https://credit-card-collection.vercel.app`）
+
 ### 品質ゲートのスコアを変える
 `src/bot.py` の `if best["total_score"] < 18:` の数値を調整
 （18〜24推奨。高いほど厳しくなりスキップが増える）
