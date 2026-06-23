@@ -72,8 +72,8 @@ TOPICS = [
 
 # ── サイト宣伝設定（Card Collection） ──────────────────────────
 PROMO_URL = os.environ.get("PROMO_URL", "https://credit-card-collection.vercel.app")
-# 何投稿に1回 宣伝ツイートを挟むか（0で無効。デフォルト5＝5回に1回）
-PROMO_EVERY = int(os.environ.get("PROMO_EVERY", "5"))
+# 何投稿に1回 宣伝ツイートを挟むか（0で無効。デフォルト2＝2回に1回）
+PROMO_EVERY = int(os.environ.get("PROMO_EVERY", "2"))
 PROMO_ANGLES = [
     "日本で発行できるクレジットカードを一覧で比較できる",
     "持っているカードをチェックしてコレクションとして可視化できる",

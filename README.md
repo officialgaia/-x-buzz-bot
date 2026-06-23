@@ -89,7 +89,7 @@ python test_dry_run.py
 `PROMO_EVERY` 投稿に1回、Card Collection（クレカ比較・コレクションサイト）の宣伝ツイートを
 通常投稿の代わりに自動投稿します。宣伝文はClaudeが毎回自然な口語で生成し、末尾にサイトURLを付与します。
 
-- デフォルトは **5**（5投稿に1回＝1日3投稿なら約1.5日に1回）
+- デフォルトは **2**（2投稿に1回＝1日3投稿なら毎日1〜2回）
 - 無効化するには `0`
 - 変更は GitHub Actions の env か、リポジトリの Variables で `PROMO_EVERY` を設定
 - 宣伝先URLは `PROMO_URL`（デフォルト `https://credit-card-collection.vercel.app`）
