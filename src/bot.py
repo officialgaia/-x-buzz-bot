@@ -273,8 +273,10 @@ def main():
 
     counter = load_counter()
 
-    # 一定間隔で Card Collection の宣伝ツイートを投稿（バズ投稿の代わり）
-    if PROMO_EVERY > 0 and counter["count"] > 0 and counter["count"] % PROMO_EVERY == 0:
+    # Card Collection の宣伝ツイートを投稿（バズ投稿の代わり）。
+    # GitHub Actions は毎回まっさらな状態で動き投稿カウントが保存されないため、
+    # 確率で判定する（1/PROMO_EVERY の確率＝平均 PROMO_EVERY 回に1回が宣伝になる）。
+    if PROMO_EVERY > 0 and random.random() < 1.0 / PROMO_EVERY:
         print("📣 宣伝ツイート生成中...")
         try:
             tweet_text, angle = generate_promo_tweet()

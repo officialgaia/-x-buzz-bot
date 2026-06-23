@@ -86,11 +86,14 @@ python test_dry_run.py
 `src/bot.py` の `TOPICS` リストを編集
 
 ### サイト宣伝ツイートの頻度を変える
-`PROMO_EVERY` 投稿に1回、Card Collection（クレカ比較・コレクションサイト）の宣伝ツイートを
+平均 `PROMO_EVERY` 投稿に1回、Card Collection（クレカ比較・コレクションサイト）の宣伝ツイートを
 通常投稿の代わりに自動投稿します。宣伝文はClaudeが毎回自然な口語で生成し、末尾にサイトURLを付与します。
 
-- デフォルトは **2**（2投稿に1回＝1日3投稿なら毎日1〜2回）
-- 無効化するには `0`
+GitHub Actions は実行のたびに状態がリセットされ投稿カウントが保存されないため、
+`1/PROMO_EVERY` の**確率**で宣伝を出す方式です（平均すると PROMO_EVERY 回に1回）。
+
+- デフォルトは **2**（＝50%の確率で宣伝。1日3投稿なら毎日1〜2回）
+- 無効化するには `0`、毎回宣伝にするには `1`
 - 変更は GitHub Actions の env か、リポジトリの Variables で `PROMO_EVERY` を設定
 - 宣伝先URLは `PROMO_URL`（デフォルト `https://credit-card-collection.vercel.app`）
 
